@@ -5,7 +5,7 @@ pipeline {
 	tools {
 		maven 'maven4'
 	}
-	parameters {
+/*	parameters {
 		choice (
 			choices: ['false', 'true'], 
 			description: 'Run CI Job', 
@@ -17,18 +17,20 @@ pipeline {
 			name: 'cd'
 			)
 
-	}
+	}*/
 	environment {
 		pom = readMavenPom file: 'pom.xml'
 		version = "${pom.version}"
 		artifactId = "${pom.artifactId}"
 		env_config_id = "petclinic"
 		env_config_file = "env.groovy"
+                ci = "true"
+                cd = "true"
   	}
 	stages {
 		stage('load env vars') {
 			steps {
-				script {
+			        script {
 					configFileProvider([configFile(fileId: "${env_config_id}", targetLocation: "${env_config_file}")]) {	
 					load "${env_config_file}"
 					}
@@ -38,7 +40,7 @@ pipeline {
 		stage('sonar') {
 		when {
         	expression {ci == 'true'}
-            }
+                }
 			steps {
                 withCredentials([string(credentialsId: 'nexus_token', variable: 'nexustoken')]) {
 				sh "mvn clean install  sonar:sonar -Dsonar.host.url=${sona_url}  -Dsonar.login=${nexustoken}"
@@ -48,7 +50,7 @@ pipeline {
 		stage('build & deploy') {
 		when {
         	expression {ci == 'true'}
-        }
+                }
 			steps {
                 withCredentials([usernamePassword(credentialsId: 'nexus', passwordVariable: 'nexus_passwd', usernameVariable: 'nexus_user')]) {
 				sh "mvn clean deploy -s settings.xml"
