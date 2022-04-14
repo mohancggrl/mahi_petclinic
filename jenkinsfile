@@ -1,0 +1,81 @@
+pipeline {
+	agent {
+		label 'master'
+	}
+	tools {
+		maven 'maven4'
+	}
+	parameters {
+		choice (
+			choices: ['false', 'true'], 
+			description: 'Run CI Job', 
+			name: 'ci'
+			)
+		choice (
+			choices: ['false', 'true'], 
+			description: 'Run cd Job', 
+			name: 'cd'
+			)
+
+	}
+	environment {
+		pom = readMavenPom file: 'pom.xml'
+		version = "${pom.version}"
+		artifactId = "${pom.artifactId}"
+		env_config_id = "petclinic"
+		env_config_file = "env.groovy"
+  	}
+	stages {
+		stage('load env vars') {
+			steps {
+				script {
+					configFileProvider([configFile(fileId: "${env_config_id}", targetLocation: "${env_config_file}")]) {	
+					load "${env_config_file}"
+					}
+				}
+			}
+		}
+		stage('sonar') {
+		when {
+        	expression {ci == 'true'}
+            }
+			steps {
+                withCredentials([string(credentialsId: 'nexus_token', variable: 'nexustoken')]) {
+				sh "mvn clean install  sonar:sonar -Dsonar.host.url=${sona_url}  -Dsonar.login=${nexustoken}"
+                }
+			}
+		}
+		stage('build & deploy') {
+		when {
+        	expression {ci == 'true'}
+        }
+			steps {
+                withCredentials([usernamePassword(credentialsId: 'nexus', passwordVariable: 'nexus_passwd', usernameVariable: 'nexus_user')]) {
+				sh "mvn clean deploy -s setting.xml"
+                }
+			}
+		}
+		stage('deploy') {
+		when {
+                	expression {cd == 'true'}
+            	}
+		agent {
+			label 'ansible'
+                }
+			steps {
+				checkout([
+					$class: 'GitSCM', 
+					branches: [[name: '*/master']], 
+					extensions: [], 
+					userRemoteConfigs: [
+					[
+						credentialsId: "${git_cred_id}", 
+						url: "${deploy_git}"
+					]
+					]
+				])
+				sh 'ansible-playbook -i inventory.yml deploy.yml -e version=$version -e artifactId=$artifactId artifactory_url=$artifactory_url -e artifactory_path=$artifactory_path'
+			}
+		}
+	}
+}
