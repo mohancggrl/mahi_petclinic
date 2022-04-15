@@ -52,7 +52,7 @@ pipeline {
         	expression {ci == 'true'}
                 }
 			steps {
-                withCredentials([usernamePassword(credentialsId: 'nexus', passwordVariable: 'nexus_passwd', usernameVariable: 'nexus_user')]) {
+                        withCredentials([usernamePassword(credentialsId: 'nexus', passwordVariable: 'nexus_passwd', usernameVariable: 'nexus_user')]) {
 				sh "mvn clean deploy -s settings.xml"
                 }
 			}
@@ -76,7 +76,7 @@ pipeline {
 					]
 					]
 				])
-				sh 'ansible-playbook -i inventory.yml deploy.yml -e version=$version -e artifactId=$artifactId artifactory_url=$artifactory_url -e artifactory_path=$artifactory_path'
+				sh 'ansible-playbook -i inventory.yml deploy.yml -e version=$version -e artifactId=$artifactId artifactory_url=$artifactory_url -e arti_path=$arti_path'
 			}
 		}
 	}
