@@ -523,7 +523,7 @@
         <repository>
         <id>nexus</id>
         <name>petclinic</name>
-        <url>http://3.83.230.109:8081/repository/petclinic/</url>
+        <url>http://54.221.5.10:8081/repository/petclinic/</url>
         </repository>
     </distributionManagement>
 
